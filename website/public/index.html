@@ -1014,15 +1014,15 @@
 
                 <div class="hero-stats">
                     <div class="icard ic-a">
-                        <div class="icard-val" data-target="2500" data-suffix="+">0+</div>
+                        <div class="icard-val">3000+</div>
                         <div class="icard-label">Members</div>
                     </div>
                     <div class="icard ic-b">
-                        <div class="icard-val" data-target="20" data-suffix="+">0+</div>
+                        <div class="icard-val">20+</div>
                         <div class="icard-label">Events</div>
                     </div>
                     <div class="icard ic-c">
-                        <div class="icard-val" data-target="50" data-suffix="+">0+</div>
+                        <div class="icard-val">50+</div>
                         <div class="icard-label">Colleges</div>
                     </div>
                 </div>
@@ -2380,72 +2380,6 @@
                 { threshold: 0.08 },
             );
             document.querySelectorAll(".r").forEach((el) => obs.observe(el));
-
-            // ── Stats Count Up Animation (Looping & Scroll-triggered) ──
-            (() => {
-                const statEls = document.querySelectorAll(".icard-val[data-target]");
-                if (!statEls.length) return;
-
-                let isRunning = false;
-                let loopTimeout = null;
-
-                function animateCountUp() {
-                    if (isRunning) return;
-                    isRunning = true;
-
-                    const duration = 1800;
-                    const startTime = performance.now();
-
-                    function step(now) {
-                        const elapsed = now - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-                        statEls.forEach((el) => {
-                            const target = parseInt(el.getAttribute("data-target"), 10);
-                            const suffix = el.getAttribute("data-suffix") || "";
-                            const currentVal = Math.floor(easeProgress * target);
-                            el.textContent = currentVal.toLocaleString() + suffix;
-                        });
-
-                        if (progress < 1) {
-                            requestAnimationFrame(step);
-                        } else {
-                            statEls.forEach((el) => {
-                                el.classList.add("count-pop");
-                                setTimeout(() => el.classList.remove("count-pop"), 450);
-                            });
-                            isRunning = false;
-
-                            loopTimeout = setTimeout(() => {
-                                animateCountUp();
-                            }, 4500);
-                        }
-                    }
-
-                    requestAnimationFrame(step);
-                }
-
-                const heroStats = document.querySelector(".hero-stats");
-                if (heroStats) {
-                    const observer = new IntersectionObserver(
-                        (entries) => {
-                            entries.forEach((entry) => {
-                                if (entry.isIntersecting) {
-                                    if (loopTimeout) clearTimeout(loopTimeout);
-                                    animateCountUp();
-                                } else {
-                                    if (loopTimeout) clearTimeout(loopTimeout);
-                                    isRunning = false;
-                                }
-                            });
-                        },
-                        { threshold: 0.1 },
-                    );
-                    observer.observe(heroStats);
-                }
-            })();
-
 
         </script>
     </body>
