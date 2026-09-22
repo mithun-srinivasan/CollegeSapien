@@ -61,6 +61,7 @@ class AppCapabilityService {
   static const _cacheTtl = Duration(minutes: 5);
   AppCapabilities? _cached;
   DateTime? _cachedAt;
+  Future<AppCapabilities>? _inflight;
 
   void invalidate() {
     _cached = null;
@@ -83,6 +84,18 @@ class AppCapabilityService {
       return _cached!;
     }
 
+    // Deduplicate concurrent calls
+    if (_inflight != null && !forceRefresh) return _inflight!;
+
+    _inflight = _doResolve(user, now);
+    try {
+      return await _inflight!;
+    } finally {
+      _inflight = null;
+    }
+  }
+
+  Future<AppCapabilities> _doResolve(User user, DateTime now) async {
     // Force a token refresh on first load or after TTL to pick up claim changes.
     final claimRole = await _resolveRoleFromTokenClaim(user);
     AppCapabilities caps;
