@@ -123,24 +123,31 @@ class ResourceService {
       onProgress: onProgress,
     );
 
-    final downloadUrl = await ref.getDownloadURL();
-
     // Only create the Firestore metadata doc after the file is safely in Storage
-    final resourceId = await uploadResourceMetadata(
-      id: id,
-      name: title,
-      category: category,
-      storagePath: 'resources/$id/$fileName',
-      fileUrl: downloadUrl,
-      fileName: fileName,
-      mimeType: mimeType,
-      sizeBytes: fileSize,
-      subjectId: subjectId,
-      subjectName: subjectName,
-      regulation: regulation,
-    );
-
-    return resourceId;
+    // then fetch the download URL and update the doc.
+    try {
+      final resourceId = await uploadResourceMetadata(
+        id: id,
+        name: title,
+        category: category,
+        storagePath: 'resources/$id/$fileName',
+        fileName: fileName,
+        mimeType: mimeType,
+        sizeBytes: fileSize,
+        subjectId: subjectId,
+        subjectName: subjectName,
+        regulation: regulation,
+      );
+      final downloadUrl = await ref.getDownloadURL();
+      await ApiService.instance.patch('/resources/$resourceId', {'fileUrl': downloadUrl});
+      return resourceId;
+    } catch (_) {
+      // Metadata creation failed — delete the Storage file to avoid orphans
+      try {
+        await ref.delete();
+      } catch (_) {}
+      rethrow;
+    }
   }
 
   Future<void> renameResource({

@@ -227,26 +227,28 @@ class AttendanceNotificationService {
 
           scheduled += 1;
           scheduledIds.add(scheduled.toString());
-          await _plugin.zonedSchedule(
-            id: scheduled,
-            title: 'Mark ${subject.code} attendance',
-            body: '${slot.startTime} - ${slot.endTime}'
-                '${slot.room.isEmpty ? '' : ' · ${slot.room}'}',
-            scheduledDate: tz.TZDateTime.from(scheduledAt, tz.local),
-            notificationDetails: _notificationDetails(),
-            androidScheduleMode: scheduleMode,
-            payload: jsonEncode({
-              'subjectId': subject.id,
-              'subjectCode': subject.code,
-              'dateKey': _dateKey(date),
-              'slotStartTime': slot.startTime,
-              'slotEndTime': slot.endTime,
-            }),
-          );
+          await prefs.setStringList(_attendanceNotifIdsKey, scheduledIds);
+          try {
+            await _plugin.zonedSchedule(
+              id: scheduled,
+              title: 'Mark ${subject.code} attendance',
+              body: '${slot.startTime} - ${slot.endTime}'
+                  '${slot.room.isEmpty ? '' : ' · ${slot.room}'}',
+              scheduledDate: tz.TZDateTime.from(scheduledAt, tz.local),
+              notificationDetails: _notificationDetails(),
+              androidScheduleMode: scheduleMode,
+              payload: jsonEncode({
+                'subjectId': subject.id,
+                'subjectCode': subject.code,
+                'dateKey': _dateKey(date),
+                'slotStartTime': slot.startTime,
+                'slotEndTime': slot.endTime,
+              }),
+            );
+          } catch (_) {}
         }
       }
     }
-    await prefs.setStringList(_attendanceNotifIdsKey, scheduledIds);
   }
 
   Future<void> syncPendingActions() async {
@@ -274,6 +276,9 @@ class AttendanceNotificationService {
     final payload = _pendingNavigationPayload;
     if (payload == null) return;
     _pendingNavigationPayload = null;
+    // Always clean up persisted copy — _restoreNavigationPayload only removes
+    // it when it restores from disk; the in-memory path leaves it on disk.
+    await _clearNavigationPayload();
     _openMarkAttendance(payload);
   }
 
@@ -364,6 +369,13 @@ class AttendanceNotificationService {
         _pendingNavigationPayload = jsonDecode(raw) as Map<String, dynamic>;
         await prefs.remove(_pendingNavigationKey);
       }
+    } catch (_) {}
+  }
+
+  static Future<void> _clearNavigationPayload() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_pendingNavigationKey);
     } catch (_) {}
   }
 

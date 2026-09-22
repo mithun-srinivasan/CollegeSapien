@@ -61,11 +61,12 @@ class AppCapabilityService {
   static const _cacheTtl = Duration(minutes: 5);
   AppCapabilities? _cached;
   DateTime? _cachedAt;
-  Future<AppCapabilities>? _inflight;
+  final Map<String, Future<AppCapabilities>> _inflight = {};
 
   void invalidate() {
     _cached = null;
     _cachedAt = null;
+    _inflight.clear();
   }
 
   Future<AppCapabilities> resolveCapabilities(
@@ -84,14 +85,16 @@ class AppCapabilityService {
       return _cached!;
     }
 
-    // Deduplicate concurrent calls
-    if (_inflight != null && !forceRefresh) return _inflight!;
+    // Deduplicate concurrent calls (forceRefresh bypasses cache only)
+    final inflight = _inflight[user.uid];
+    if (inflight != null) return inflight;
 
-    _inflight = _doResolve(user, now);
+    final future = _doResolve(user, now);
+    _inflight[user.uid] = future;
     try {
-      return await _inflight!;
+      return await future;
     } finally {
-      _inflight = null;
+      _inflight.remove(user.uid);
     }
   }
 
